@@ -121,35 +121,6 @@ func (action ActionType) String() string {
 	return "none"
 }
 
-// HistoryInfo is used for binlog.
-type HistoryInfo struct {
-	SchemaVersion int64
-	DBInfo        *DBInfo
-	TableInfo     *TableInfo
-	FinishedTS    uint64
-}
-
-// AddDBInfo adds schema version and schema information that are used for binlog.
-// dbInfo is added in the following operations: create database, drop database.
-func (h *HistoryInfo) AddDBInfo(schemaVer int64, dbInfo *DBInfo) {
-	h.SchemaVersion = schemaVer
-	h.DBInfo = dbInfo
-}
-
-// AddTableInfo adds schema version and table information that are used for binlog.
-// tblInfo is added except for the following operations: create database, drop database.
-func (h *HistoryInfo) AddTableInfo(schemaVer int64, tblInfo *TableInfo) {
-	h.SchemaVersion = schemaVer
-	h.TableInfo = tblInfo
-}
-
-// Clean cleans history information.
-func (h *HistoryInfo) Clean() {
-	h.SchemaVersion = 0
-	h.DBInfo = nil
-	h.TableInfo = nil
-}
-
 // DDLReorgMeta is meta info of DDL reorganization.
 type DDLReorgMeta struct {
 	// EndHandle is the last handle of the adding indices table.
@@ -190,8 +161,7 @@ type Job struct {
 	// DependencyID is the job's ID that the current job depends on.
 	DependencyID int64 `json:"dependency_id"`
 	// Query string of the ddl job.
-	Query      string       `json:"query"`
-	BinlogInfo *HistoryInfo `json:"binlog"`
+	Query string `json:"query"`
 
 	// Version indicates the DDL job version. For old jobs, it will be 0.
 	Version int64 `json:"version"`
@@ -209,7 +179,6 @@ type Job struct {
 func (job *Job) FinishTableJob(jobState JobState, schemaState SchemaState, ver int64, tblInfo *TableInfo) {
 	job.State = jobState
 	job.SchemaState = schemaState
-	job.BinlogInfo.AddTableInfo(ver, tblInfo)
 }
 
 // FinishDBJob is called when a job is finished.
@@ -217,7 +186,6 @@ func (job *Job) FinishTableJob(jobState JobState, schemaState SchemaState, ver i
 func (job *Job) FinishDBJob(jobState JobState, schemaState SchemaState, ver int64, dbInfo *DBInfo) {
 	job.State = jobState
 	job.SchemaState = schemaState
-	job.BinlogInfo.AddDBInfo(ver, dbInfo)
 }
 
 // TSConvert2Time converts timestamp to time.
